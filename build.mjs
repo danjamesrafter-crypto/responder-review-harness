@@ -8,7 +8,7 @@ try { commit = execSync('git rev-parse --short HEAD').toString().trim() + (execS
 const pkg = JSON.parse(fs.readFileSync('node_modules/react/package.json'));
 const esb = JSON.parse(fs.readFileSync('node_modules/esbuild/package.json'));
 const jsp = JSON.parse(fs.readFileSync('node_modules/jspdf/package.json'));
-const BUILD = { version: '0.3.1', mode: 'harness', built: new Date().toISOString().replace(/\.\d+Z$/, 'Z'), react: pkg.version, esbuild: esb.version, jspdf: jsp.version, repo: process.env.REPO || '', commit };
+const BUILD = { version: '0.3.2', mode: 'harness', built: new Date().toISOString().replace(/\.\d+Z$/, 'Z'), react: pkg.version, esbuild: esb.version, jspdf: jsp.version, repo: process.env.REPO || '', commit };
 
 const out = await esbuild.build({
   entryPoints: ['src/app.jsx'], bundle: true, format: 'iife', write: false, minify: true,
