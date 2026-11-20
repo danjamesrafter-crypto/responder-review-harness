@@ -1,0 +1,31 @@
+const { chromium } = require('/opt/npm-tools/node_modules/playwright');
+(async () => {
+  const b = await chromium.launch();
+  const ctx = await b.newContext({ viewport: { width: 1600, height: 960 }, acceptDownloads: true });
+  const p = await ctx.newPage();
+  const errs = [];
+  p.on('pageerror', e => errs.push('pageerror: ' + e.message));
+  p.on('console', m => { if (m.type() === 'error' && !/fonts\.g|ERR_|Failed to load/.test(m.text())) errs.push('console: ' + m.text()); });
+  await p.goto('file:///home/claude/responder-review/dist/responder-review.html');
+  await p.waitForSelector('.tile img');
+  // approve S101 with 3 picks first
+  const picks = p.locator('.tile .pick button');
+  await picks.nth(1).click(); await picks.nth(3).click(); await picks.nth(7).click();
+  await p.getByRole('button', { name: 'Record Decision...' }).click();
+  await p.waitForTimeout(400);
+  await p.getByRole('button', { name: /Record as/ }).click();
+  await p.getByRole('button', { name: 'Export PDF...' }).click();
+  await p.waitForTimeout(500);
+  await p.screenshot({ path: 'test/11-pdf-dialog.png' });
+  await p.getByRole('button', { name: '50%' }).click();
+  await p.waitForTimeout(200);
+  await p.screenshot({ path: 'test/12-pdf-dialog-50.png' });
+  const [dl] = await Promise.all([p.waitForEvent('download'), p.getByRole('button', { name: /Download PDF/ }).click()]);
+  await dl.saveAs('test/report.pdf');
+  await p.waitForTimeout(600);
+  await p.getByRole('tab', { name: 'Audit Trail' }).click();
+  await p.getByRole('button', { name: 'All Activity' }).click();
+  await p.screenshot({ path: 'test/13-audit.png' });
+  console.log('errors', errs);
+  await b.close();
+})();
