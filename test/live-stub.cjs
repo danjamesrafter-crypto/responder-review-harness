@@ -28,7 +28,7 @@ db.sessions['sub-scin1'] = [];
 const stub = `
 window.__fw = { writes: [], uploads: [], viewport: [], db: ${JSON.stringify(db)} };
 const pg = (arr, q) => ({ count: arr.slice(q.skip||0, (q.skip||0)+(q.limit||100)).length, total: arr.length, results: arr.slice(q.skip||0, (q.skip||0)+(q.limit||100)) });
-window.Flywheel = { initExtension: async (o) => ({
+const __stubFw = { initExtension: async (o) => ({
   user: { _id: 'tester@flywheel.example' }, params: {}, container: __fw.db.project,
   updateViewport: (v) => __fw.viewport.push(v),
   getContainer: async (t, id) => { if (t==='project') return __fw.db.project; if (t==='subject') return __fw.db.subjects.find(s=>s._id===id); if (t==='session') return Object.values(__fw.db.sessions).flat().find(s=>s._id===id); return Object.values(__fw.db.acqs).flat().find(a=>a._id===id); },
@@ -36,7 +36,8 @@ window.Flywheel = { initExtension: async (o) => ({
   getFileBlob: async (c, f) => { const r = await fetch('/syn/' + f.name); return r.blob(); },
   updateContainerInfo: async (c, upd) => { __fw.writes.push({ id: c._id, upd: JSON.parse(JSON.stringify(upd)) }); },
   uploadFile: (c, file) => ({ subscribe: ({ complete }) => { __fw.uploads.push({ id: c._id, name: file.name, size: file.size }); setTimeout(complete, 10); } }),
-}) };`;
+}) };
+Object.defineProperty(window, 'Flywheel', { get: () => __stubFw, set: () => {}, configurable: false });`;
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 1600, height: 960 }, acceptDownloads: true });
@@ -44,7 +45,7 @@ window.Flywheel = { initExtension: async (o) => ({
   const errs = [];
   p.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
   p.on('console', (m) => { if (m.type() === 'error' && !/fonts\.g|ERR_|Failed to load/.test(m.text())) errs.push('console: ' + m.text()); });
-  await p.route('https://cdn.flywheel.io/**', (r) => r.fulfill({ contentType: 'application/javascript', body: stub }));
+  await p.addInitScript({ content: stub });
   await p.route('http://app.test/**', (r) => {
     const u = new URL(r.request().url());
     if (u.pathname.startsWith('/syn/')) return r.fulfill({ path: path.join(SYN, decodeURIComponent(u.pathname.slice(5))), contentType: 'image/jpeg' });
